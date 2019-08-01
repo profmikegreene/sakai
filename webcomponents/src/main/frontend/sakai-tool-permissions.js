@@ -1,6 +1,6 @@
 import {SakaiElement} from "./sakai-element.js";
 import {html} from "./assets/lit-element/lit-element.js";
-import{MyCheckbox} from "./SakaiCheckboxDemo.js";
+import {MyCheckbox} from "./SakaiCheckboxDemo.js";
 import {repeat} from "./assets/lit-html/directives/repeat.js";
 
 export class SakaiToolPermissions extends SakaiElement {
@@ -60,10 +60,7 @@ export class SakaiToolPermissions extends SakaiElement {
             </td>
             ${this.roles.map(role => html`
             <td class="${role}-checkbox-cell checkboxCell">
-              <label for="${role}:${perm}" class="sr-only">
-                <span>${this.i18n["gen.enable"]} ${role}</span>
-              </label>
-              <chk-box saklabel="${this.i18n["save"]}"></chk-box>
+              <chk-box checkboxid="${role}:${this.i18n[perm]}" checkboxlabel="${this.i18n["gen.enable"]} ${role}"></chk-box>
             </td>
             `)}
           </tr>
