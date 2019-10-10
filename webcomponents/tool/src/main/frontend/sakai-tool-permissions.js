@@ -71,7 +71,7 @@ export class SakaiToolPermissions extends SakaiElement {
             </td>
             ${this.roles.map(role => html`
             <td class="${role}-checkbox-cell checkboxCell">
-              <chk-box checkboxclass="sakai-permissions-checkbox" checkboxid="${role}:${perm}" checkboxlabel="${this.i18n[perm]}"></chk-box>
+              <chk-box checkboxclass="sakai-permission-checkbox" checkboxid="${role}:${perm}" checkboxlabel="${this.i18n["gen.enable"]} ${role}"></chk-box>
             </td>
             `)}
           </tr>
