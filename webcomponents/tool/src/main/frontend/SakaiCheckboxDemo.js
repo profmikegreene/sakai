@@ -15,6 +15,11 @@ export class MyCheckbox extends SakaiElement {
                 // attribute: 'checkbox-id',
                 // reflect: true
             },
+            checkboxclass: {
+                type: String,
+                // attribute: 'checkbox-class',
+                // reflect: true
+            },
             ischecked: {
                 type: Boolean
             }
@@ -24,6 +29,7 @@ export class MyCheckbox extends SakaiElement {
         super();
         this.checkboxlabel;
         this.checkboxid;
+        this.checkboxclass;
         this.ischecked;
     }
 
@@ -34,7 +40,7 @@ export class MyCheckbox extends SakaiElement {
             <label class="sr-only" for="${this.checkboxid}">
                 <span>${this.checkboxlabel}</span>
             </label>
-            <input type="checkbox" class="sakai-checkbox" 
+            <input type="checkbox" class="${this.checkboxclass} sakai-checkbox" 
                 aria-label="${this.checkboxlabel}"
                 id="${this.checkboxid}"
                 .checked="${this.ischecked}"/>
