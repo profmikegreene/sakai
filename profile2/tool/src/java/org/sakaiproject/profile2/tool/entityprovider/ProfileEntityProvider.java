@@ -17,12 +17,12 @@ package org.sakaiproject.profile2.tool.entityprovider;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import lombok.Setter;
@@ -62,6 +62,14 @@ import org.sakaiproject.profile2.model.UserProfile;
 import org.sakaiproject.profile2.util.Messages;
 import org.sakaiproject.profile2.util.ProfileConstants;
 import org.sakaiproject.profile2.util.ProfileUtils;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
+import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.http.server.ServletServerHttpResponse;
 
 /**
  * This is the entity provider for a user's profile.
@@ -468,31 +476,53 @@ public class ProfileEntityProvider extends AbstractEntityProvider implements Cor
 		
 		MimeTypeByteArray mtba = profileLogic.getUserNamePronunciation(uuid);
 		if(mtba != null && mtba.getBytes() != null) {
-			final byte[] bytes = mtba.getBytes();
-			//check for binary
-			if(bytes != null && bytes.length > 0) {
-				try {
+			try {
+				HttpServletResponse response = requestGetter.getResponse();
+				HttpServletRequest request = requestGetter.getRequest();
+				response.setHeader("Expires", "0");
+				response.setHeader("Pragma", "no-cache");
+				response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+				response.setContentType(mtba.getMimeType());
+
+				// Are we processing a Range request
+				if (request.getHeader(HttpHeaders.RANGE) == null) {
+					// Not a Range request
+					byte[] bytes = mtba.getBytes();
+					response.setContentLengthLong(bytes.length);
 					out.write(bytes);
-					ActionReturn actionReturn = new ActionReturn(StandardCharsets.UTF_8.name(), "audio/ogg", out);
+					return new ActionReturn(Formats.UTF_8, mtba.getMimeType() , out);
+ 				} else {
+					// A Range request - we use springs HttpRange class
+					Resource resource = new ByteArrayResource(mtba.getBytes());
+					response.setHeader(HttpHeaders.ACCEPT_RANGES, "bytes");
+					response.setContentLengthLong(resource.contentLength());
+					response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+					try {
+						ServletServerHttpRequest inputMessage = new ServletServerHttpRequest(request);
+						ServletServerHttpResponse outputMessage = new ServletServerHttpResponse(response);
 
-					Map<String,String> headers = new HashMap<>();
-					headers.put("Expires", "0");
-					headers.put("Cache-Control","no-cache, no-store, must-revalidate");
-					headers.put("Pragma", "no-cache");
-					actionReturn.setHeaders(headers);
+						List<HttpRange> httpRanges = inputMessage.getHeaders().getRange();
+						ResourceRegionHttpMessageConverter messageConverter = new ResourceRegionHttpMessageConverter();
 
-					return actionReturn;
-
-				} catch (IOException e) {
-					throw new EntityException("Error retrieving name pronunciation for " + uuid + " : " + e.getMessage(), ref.getReference());
+						if (httpRanges.size() == 1) {
+							ResourceRegion resourceRegion = httpRanges.get(0).toResourceRegion(resource);
+							messageConverter.write(resourceRegion, null, outputMessage);
+						} else {
+							messageConverter.write(HttpRange.toResourceRegions(httpRanges, resource), null, outputMessage);
+						}
+					} catch (IllegalArgumentException iae) {
+						response.setHeader("Content-Range", "bytes */" + resource.contentLength());
+						response.sendError(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
+						log.warn("Name pronunciation request failed to send the requested range for {}, {}", ref.getReference(), iae.getMessage());
+					}
 				}
+			} catch (Exception e) {
+				throw new EntityException("Name pronunciation request failed, " + e.getMessage(), ref.getReference());
 			}
 		}
-
 		return null;
 	}
 
-	
 	/**
 	 * {@inheritDoc}
 	 */

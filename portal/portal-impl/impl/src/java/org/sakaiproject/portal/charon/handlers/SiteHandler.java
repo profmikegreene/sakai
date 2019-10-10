@@ -110,7 +110,7 @@ public class SiteHandler extends WorksiteHandler
 	// SAK-29180 - Normalize the properties, keeping the legacy pda sakai.properties names through Sakai-11 at least
 	private static final String BYPASS_URL_PROP = "portal.bypass";
 	private static final String LEGACY_BYPASS_URL_PROP = "portal.pda.bypass";
-	private static final String DEFAULT_BYPASS_URL = "\\.jpg$|\\.gif$|\\.js$|\\.png$|\\.jpeg$|\\.prf$|\\.css$|\\.zip$|\\.pdf\\.mov$|\\.json$|\\.jsonp$\\.xml$|\\.ajax$|\\.xls$|\\.xlsx$|\\.doc$|\\.docx$|uvbview$|linktracker$|hideshowcolumns$";
+	private static final String DEFAULT_BYPASS_URL = "\\.jpg$|\\.gif$|\\.js$|\\.png$|\\.jpeg$|\\.prf$|\\.css$|\\.zip$|\\.pdf\\.mov$|\\.json$|\\.jsonp$\\.xml$|\\.ajax$|\\.xls$|\\.xlsx$|\\.doc$|\\.docx$|uvbview$|linktracker$|hideshowcolumns$|scormplayerpage$|scormcompletionpage$";
 
 	// Make sure to lower-case the matching regex (i.e. don't use IResourceListener below)
 	private static final String BYPASS_QUERY_PROP = "portal.bypass.query";
@@ -570,6 +570,9 @@ public class SiteHandler extends WorksiteHandler
 
 		rcontext.put("currentUrlPath", Web.serverUrl(req) + req.getContextPath()
 				+ URLUtils.getSafePathInfo(req));
+
+		rcontext.put("usePortalSearch", ServerConfigurationService.getBoolean("portal.search.enabled", true));
+		rcontext.put("portalSearchPageSize", ServerConfigurationService.getString("portal.search.pageSize", "10"));
 
 		//Find any quick links ready for display in the top navigation bar,
 		//they can be set per site or for the whole portal.

@@ -56,8 +56,6 @@ Boolean allowSettings = (Boolean) rReq.getAttribute("allowSettings");
 
 Boolean allowRoster = (Boolean) rReq.getAttribute("allowRoster");
 
-Boolean allowContentLink = (Boolean) rReq.getAttribute("allowContentLink");
-
 %>
 <portlet:defineObjects/>
 <div class="portletBody">
@@ -71,13 +69,12 @@ Boolean allowContentLink = (Boolean) rReq.getAttribute("allowContentLink");
         allow(sp, "sha256") ||
 		allow(sp,"custom") || 
 		allow(sp,"allowsettings") || allow(sp, "allowroster") || 
-        allow(sp, "allowoutcomes") || 
-		allow(sp, "contentlink") || allow(sp, "splash") ||
+        allow(sp, "allowoutcomes") || allow(sp, "splash") ||
         allow(sp, "fa_icon")
 ) { 
 
     if ( errorMsg != null ) { %>
-		<div class="alertMessage"><%= errorMsg %></div>
+		<div class="sak-banner-error"><%= errorMsg %></div>
 	<% } %>
 
 <script type="text/javascript" src="/library/js/headscripts.js"></script>
@@ -318,16 +315,6 @@ if ( document.getElementById("UISwitcher") ) switchui();
 
 <% } %>
 
-<% if ( allow(sp,"contentlink") && allowContentLink ) { %>
-<h3><%=rb.getString("contentlink.legend") %></h3>
-<p class="shorttext" style="clear:none">
-<label for="imsti.contentlink"><%=rb.getString("contentlink.label") %></label><br/>
-<input type="text" name="imsti.contentlink" size="80" id="imsti.contentlink" value="<%=ov.getProperty("imsti.contentlink","")%>"> 
-<span class="textPanelFooter"><%=rb.getString("contentlink.detail") %></span>
-</p>
-<% } %>
-
-
 <% if ( allow(sp,"allowsettings") && allowSettings ) { %>
 <h3><%=rb.getString("allowsettings.information") %></h3>
 <p>
@@ -363,7 +350,7 @@ if ( document.getElementById("UISwitcher") ) switchui();
 <textarea rows="10" cols="60"  name="imsti.custom" id="imsti.custom" >
 <%=ov.getProperty("imsti.custom","")%>
 </textarea>
-
+	
 </p>
 <% } %>
 <p class="act">
@@ -374,7 +361,7 @@ if ( document.getElementById("UISwitcher") ) switchui();
 </form>
 <% } else { 
     if ( errorMsg != null ) { %>
-		<div class="alertMessage"><%= errorMsg %></div>
+		<div class="sak-banner-error"><%= errorMsg %></div>
 	<% } %>
 
 <ul class="navIntraTool actionToolBar">

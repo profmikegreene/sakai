@@ -14,7 +14,7 @@
 	<packaging>war</packaging>
 	<properties>
 		<!-- This is used in re-write rules as well -->
-		<ckeditor.version>4.12.1</ckeditor.version>
+		<ckeditor.version>4.13.0</ckeditor.version>
 		<bootstrap-version>3.3.7</bootstrap-version>
 		<font-awesome-version>4.7.0</font-awesome-version>
 		<!-- Default extra plugins enabled -->
@@ -45,13 +45,19 @@
 			<artifactId>urlrewritefilter</artifactId>
 			<version>4.0.3</version>
 		</dependency>
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>jstree</artifactId>
+			<version>3.3.8</version>
+		</dependency>
+		
 		<!-- At the moment we're unpacking the webjars, so we don't want them bundled into the WAR
 		     but we still need them as dependencies so the plugin unpacks them, that's why they
 		     have a scope of runtime -->
 		<dependency>
 			<groupId>org.webjars</groupId>
 			<artifactId>codemirror</artifactId>
-			<version>5.45.0</version>
+			<version>5.48.2</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
@@ -151,15 +157,15 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.webjars</groupId>
+			<groupId>org.webjars.npm</groupId>
 			<artifactId>pnotify</artifactId>
-			<version>3.2.1</version>
+			<version>4.0.0</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.webjars.bower</groupId>
 			<artifactId>elfinder</artifactId>
-			<version>2.1.49</version>
+			<version>2.1.50</version>
 			<scope>runtime</scope>
 			<exclusions>
 				<!-- The exclusions are because the bower versions don't have concat/min versions -->
@@ -188,19 +194,19 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>select2</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.8</version>
             <scope>runtime</scope>
         </dependency>
 		<dependency>
 			<groupId>org.webjars</groupId>
 			<artifactId>fullcalendar</artifactId>
-			<version>4.0.1</version>
+			<version>4.2.0</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.webjars</groupId>
 			<artifactId>datatables</artifactId>
-			<version>1.10.19</version>
+			<version>1.10.20</version>
 			<scope>runtime</scope>
 		</dependency>
   		<dependency>
@@ -228,17 +234,17 @@
 		<dependency>
 			<groupId>org.webjars.npm</groupId>
 			<artifactId>recordrtc</artifactId>
-			<version>5.5.4</version>
+			<version>5.5.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.webjars.npm</groupId>
 			<artifactId>webrtc-adapter</artifactId>
-			<version>7.2.1</version>
+			<version>7.2.9</version>
 		</dependency>
 		<dependency>
 			<groupId>org.webjars.npm</groupId>
 			<artifactId>mathjs</artifactId>
-			<version>6.0.2</version>
+			<version>6.0.3</version>
 		</dependency>
 	</dependencies>
 	<profiles>

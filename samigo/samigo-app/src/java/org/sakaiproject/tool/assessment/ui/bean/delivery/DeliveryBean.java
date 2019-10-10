@@ -41,12 +41,15 @@ import javax.faces.context.FacesContext;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.event.cover.NotificationService;
 import org.sakaiproject.exception.IdUnusedException;
+import org.sakaiproject.portal.util.PortalUtils;
 import org.sakaiproject.samigo.util.SamigoConstants;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SitePage;
@@ -198,6 +201,11 @@ public class DeliveryBean
   private boolean lastSave;
   private int actualNumberRetake;
   private Map itemContentsMap;
+
+  @Getter @Setter
+  private String minutesLeft;
+  @Getter @Setter
+  private String secondsLeft;
   
   // For paging
   private int partIndex;
@@ -215,6 +223,7 @@ public class DeliveryBean
   private AssessmentGradingData adata;
   private PublishedAssessmentFacade publishedAssessment;
   private java.util.Date feedbackDate;
+  @Getter @Setter private Date feedbackEndDate;
   private String feedbackDelivery;
   private String showScore;
   private boolean hasTimeLimit;
@@ -1876,10 +1885,6 @@ public class DeliveryBean
 	  return saveAndExit(true);
   }
   
-  public String saveNoCheck() {
-	  return saveAndExit(false);
-  }
-  
   public String saveAndExit(boolean needToCheck)
   {
 	  if (needToCheck) {  
@@ -2815,6 +2820,24 @@ public class DeliveryBean
   public void setFeedbackDate(java.util.Date feedbackDate)
   {
     this.feedbackDate = feedbackDate;
+  }
+
+  public String getFeedbackEndDateString()
+  {
+    String dateString = "";
+    if (feedbackEndDate== null) {
+      return dateString;
+    }
+
+    try {
+      TimeUtil tu = new TimeUtil();
+      dateString = tu.getDisplayDateTime(displayFormat, feedbackEndDate, true);
+    }
+    catch (Exception ex) {
+      // we will leave it as an empty string
+      log.warn("Unable to format date.", ex);
+    }
+    return dateString;
   }
 
   public String getFeedbackDelivery()
@@ -4233,4 +4256,17 @@ public class DeliveryBean
       return ServerConfigurationService.getString("samigo.ajaxTimerMinReqScale","5000");
     }
 
+    public void calculateMinutesAndSecondsLeft() {
+        String ms = getAutoSaveRepeatMilliseconds();
+        int milliseconds = Integer.parseInt(ms);
+        if (milliseconds != -1) {
+            Date d = new Date(milliseconds);
+            this.setMinutesLeft(String.valueOf(d.getMinutes()));
+            this.setSecondsLeft(String.valueOf(d.getSeconds()));
+        }
+    }
+
+    public String getCDNQuery() {
+        return PortalUtils.getCDNQuery();
+    }
 }

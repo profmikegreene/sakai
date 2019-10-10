@@ -1,8 +1,8 @@
-import {SakaiElement} from "/webcomponents/sakai-element.js";
+import {RubricsElement} from "./rubrics-element.js";
 import {html} from "/webcomponents/assets/lit-element/lit-element.js";
 import {SakaiRubricsLanguage} from "./sakai-rubrics-language.js";
 
-class SakaiRubricAssociation extends SakaiElement {
+class SakaiRubricAssociation extends RubricsElement {
 
   constructor() {
 
@@ -15,7 +15,7 @@ class SakaiRubricAssociation extends SakaiElement {
 
   set token(newValue) {
 
-    rubrics.initLightbox(newValue);
+    this.rubricsUtils.initLightbox(newValue);
     this._token = "Bearer " + newValue;
   }
 
@@ -102,7 +102,7 @@ class SakaiRubricAssociation extends SakaiElement {
         `
         :
         html`
-        <span class="messageInformation indnt2" style="width: 80%">
+        <span class="sak-banner-info indnt2" style="width: 80%">
           <sr-lang key="no_rubrics">No rubrics have been created.</sr-lang>
         </span>
       `}
@@ -206,7 +206,7 @@ class SakaiRubricAssociation extends SakaiElement {
 
     e.preventDefault();
     if (this.isAssociated) {
-      rubrics.showRubric(document.getElementById("rbcs-rubricslist").value);
+      this.rubricsUtils.showRubric(document.getElementById("rbcs-rubricslist").value);
     } else {
       e.target.blur();
     }

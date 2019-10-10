@@ -26,7 +26,7 @@
     <sakai.commons.lang3.version>3.9</sakai.commons.lang3.version>
     <sakai.commons.fileupload.version>1.4</sakai.commons.fileupload.version>
     <sakai.commons-math3.version>3.6.1</sakai.commons-math3.version>
-    <sakai.commons-text.version>1.6</sakai.commons-text.version>
+    <sakai.commons-text.version>1.8</sakai.commons-text.version>
     <sakai.commons-validator.version>1.6</sakai.commons-validator.version>
     <sakai.commons-logging.version>1.2</sakai.commons-logging.version>
     <sakai.commons.configuration.version>1.6</sakai.commons.configuration.version>
@@ -40,13 +40,13 @@
     <sakai.httpclient.version>4.5.8</sakai.httpclient.version>
     <sakai.httpcore.version>4.4.11</sakai.httpcore.version>
     <sakai.httpmime.version>4.5.8</sakai.httpmime.version>
-    <sakai.jackson.version>2.10.0.pr1</sakai.jackson.version>
+    <sakai.jackson.version>2.9.10</sakai.jackson.version>
     <sakai.jsoup.version>1.12.1</sakai.jsoup.version>
     <sakai.woodstox.version>5.2.1</sakai.woodstox.version>
     <sakai.stax2.version>4.2</sakai.stax2.version>
     <sakai.java.jwt.version>3.1.0</sakai.java.jwt.version>
     <sakai.jstl.version>1.2</sakai.jstl.version>
-    <sakai.lombok.version>1.18.8</sakai.lombok.version>
+    <sakai.lombok.version>1.18.10</sakai.lombok.version>
     <sakai.lucene.version>4.10.4</sakai.lucene.version>
     <sakai.org.json.version>20180813</sakai.org.json.version>
     <sakai.pluto.version>1.1.7</sakai.pluto.version>
@@ -57,17 +57,17 @@
     <sakai.simple-xml.version>2.7.1</sakai.simple-xml.version>
     <sakai.spring.groupId>org.springframework</sakai.spring.groupId>
     <sakai.spring.artifactId>spring-core</sakai.spring.artifactId>
-    <sakai.spring.version>4.3.24.RELEASE</sakai.spring.version>
-    <sakai.spring.data.commons.version>1.13.22.RELEASE</sakai.spring.data.commons.version>
-    <sakai.spring.data.jpa.version>1.11.22.RELEASE</sakai.spring.data.jpa.version>
-    <sakai.spring.data.rest.version>2.6.22.RELEASE</sakai.spring.data.rest.version>
+    <sakai.spring.version>4.3.25.RELEASE</sakai.spring.version>
+    <sakai.spring.data.commons.version>1.13.23.RELEASE</sakai.spring.data.commons.version>
+    <sakai.spring.data.jpa.version>1.11.23.RELEASE</sakai.spring.data.jpa.version>
+    <sakai.spring.data.rest.version>2.6.23.RELEASE</sakai.spring.data.rest.version>
     <sakai.spring.security.version>4.2.13.RELEASE</sakai.spring.security.version>
-    <sakai.spring.hateoas.version>0.25.1.RELEASE</sakai.spring.hateoas.version>
+    <sakai.spring.hateoas.version>0.25.2.RELEASE</sakai.spring.hateoas.version>
     <sakai.spring.plugin.version>1.2.0.RELEASE</sakai.spring.plugin.version>
     <sakai.spring.test.artifactId>spring-test</sakai.spring.test.artifactId>
-    <sakai.spring.test.version>4.3.24.RELEASE</sakai.spring.test.version>
-    <sakai.tika.version>1.21</sakai.tika.version>
-    <sakai.tomcat.version>9.0.22</sakai.tomcat.version>
+    <sakai.spring.test.version>4.3.25.RELEASE</sakai.spring.test.version>
+    <sakai.tika.version>1.22</sakai.tika.version>
+    <sakai.tomcat.version>9.0.26</sakai.tomcat.version>
     <sakai.velocity.version>1.6.4</sakai.velocity.version>
     <sakai.xerces.impl.version>2.12.0</sakai.xerces.impl.version>
     <sakai.xerces.api.version>2.6.2</sakai.xerces.api.version>
@@ -77,8 +77,8 @@
     <sakai.mockito.version>2.28.2</sakai.mockito.version>
     <sakai.powermock.version>2.0.2</sakai.powermock.version>
     <sakai.okiosid.version>2.0</sakai.okiosid.version>
-    <joda.time.version>2.10.3</joda.time.version>
-    <sakai.weld.shaded.version>3.1.1.Final</sakai.weld.shaded.version>
+    <joda.time.version>2.10.4</joda.time.version>
+    <sakai.weld.shaded.version>3.1.2.Final</sakai.weld.shaded.version>
     <jayway.jsonpath.version>2.4.0</jayway.jsonpath.version>
     <sakai.genericdao.version>0.11.0</sakai.genericdao.version>
     <reflectutils.version>0.9.20</reflectutils.version>
@@ -102,10 +102,10 @@
 
     <!-- These should only be updated when the webjars version is updated -->
     <ckeditor.autosave.version>0.18.1</ckeditor.autosave.version>
-    <ckeditor.wordcount.version>1.17.4</ckeditor.wordcount.version>
+    <ckeditor.wordcount.version>1.17.6</ckeditor.wordcount.version>
     <ckeditor.a11ychecker.version>1.1.1</ckeditor.a11ychecker.version>
     <ckeditor.balloonpanel.version>4.9.2</ckeditor.balloonpanel.version>
-    <ckeditor.image2.version>4.11.1</ckeditor.image2.version>
+    <ckeditor.image2.version>4.13.0</ckeditor.image2.version>
     
   </properties>
   <distributionManagement>
@@ -286,6 +286,22 @@
       <snapshots>
         <enabled>false</enabled>
         <checksumPolicy>ignore</checksumPolicy>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>repository.spring.release</id>
+      <name>Spring GA Repository</name>
+      <url>http://repo.spring.io/release</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>repository.spring.libs.release</id>
+      <name>Spring Lib Repository</name>
+      <url>http://repo.spring.io/libs-release</url>
+      <snapshots>
+        <enabled>false</enabled>
       </snapshots>
     </repository>
     <repository>
@@ -601,7 +617,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-collections4</artifactId>
-        <version>4.3</version>
+        <version>4.4</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -653,13 +669,13 @@
       <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
-        <version>1.12</version>
+        <version>1.13</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
-        <version>1.9.3</version>
+        <version>1.9.4</version>
       </dependency>
       <dependency>
         <groupId>commons-digester</groupId>
@@ -736,10 +752,6 @@
         <version>${sakai.log4j.version}</version>
         <scope>provided</scope>
         <exclusions>
-          <exclusion>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
-          </exclusion>
           <exclusion>
             <groupId>javax.jms</groupId>
             <artifactId>jms</artifactId>
@@ -867,7 +879,7 @@
       <dependency>
         <groupId>org.mnode.ical4j</groupId>
         <artifactId>ical4j</artifactId>
-        <version>2.0.5</version>
+        <version>3.0.7</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -903,6 +915,18 @@
         <groupId>javax.transaction</groupId>
         <artifactId>jta</artifactId>
         <version>1.1</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.mail</groupId>
+        <artifactId>jakarta.mail</artifactId>
+        <version>1.6.4</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.mail</groupId>
+        <artifactId>mail</artifactId>
+        <version>1.5.0-b01</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -1490,6 +1514,12 @@
       </dependency>
       <dependency>
         <groupId>org.sakaiproject</groupId>
+        <artifactId>sakai-onedrive-api</artifactId>
+        <version>${sakai.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.sakaiproject</groupId>
         <artifactId>sakai-podcasts-api</artifactId>
         <version>${sakai.version}</version>
         <scope>provided</scope>
@@ -1824,7 +1854,7 @@
       <dependency>
           <groupId>org.mariadb.jdbc</groupId>
           <artifactId>mariadb-java-client</artifactId>
-          <version>2.4.1</version>
+          <version>2.5.0</version>
           <scope>provided</scope>
       </dependency>
       <dependency>

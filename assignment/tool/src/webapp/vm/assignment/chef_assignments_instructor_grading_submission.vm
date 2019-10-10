@@ -1,4 +1,5 @@
 <!-- start: chef_assignments_instructor_grading_submission.vm  -->
+#module("/rubrics-service/webcomponents/rubric-association-requirements.js")
 #set( $H = '-' )
 #javascript("/library/js/lang-datepicker/lang-datepicker.js")
 
@@ -199,44 +200,7 @@
                         #if (!$submission || !$!service.isContentReviewVisibleForSubmission($!submission))
                             $tlang.getString("review.notavail")
                         #else
-                            #set($reviewResults=$!service.getContentReviewResults($!submission))
-                            #if ($reviewResults.size() >= 3)
-                                <div class="discTria">
-                                    <input class="disclosureTriangle" type="image"
-                                           onclick="ASN.handleReportsTriangleDisclosure(this,this.parentNode.parentNode.children[1]); return false;"
-                                           src="#imageLink("sakai/expand.gif")"
-                                           alt="$tlang.getString('review.report.expand')"/>
-                                ## TODO: reconsider for i18n:
-                                    $reviewResults.size() $tlang.getString("review.reports")
-                                </div>
-                            <div id="reportsDiv" style="display:none;">
-                            #end
-                            #foreach ($reviewResult in $reviewResults)
-                                <div>
-                                    #set ($props = $reviewResult.getContentResource().Properties)
-                                    <span class="reportIcon">
-											#if (!$reviewResult.getReviewReport().equals("Error"))<a
-                                                    href="$reviewResult.getReviewReport()" target="_blank">#end
-                                        <span class="$reviewResult.getReviewIconCssClass()"
-                                              title="#if($reviewResult.getReviewReport().equals(
-                                                  "Error"))$reviewResult.getReviewError()#{else}$reviewResult.getReviewScore()#end"></span>
-                                        #if (!$reviewResult.getReviewReport().equals("Error"))</a>#end
-										</span>
-                                    #if ($reviewResult.isInline())
-                                        $tlang.getString("submission.inline")
-                                    #else
-                                        $validator.escapeHtml($props.getPropertyFormatted($props.NamePropDisplayName))
-                                    #end
-
-                                    #if (!$reviewResult.getReviewReport().equals("Error") &&
-                                        $reviewResult.contentReviewItem.Properties.get($NamePropContentReviewOptoutUrl))
-                                        (<a href="$!reviewResult.contentReviewItem.Properties.get($NamePropContentReviewOptoutUrl)" target="_blank">$tlang.getString("review.report.urkund.optoutlink")</a>)
-                                    #end
-                                </div>
-                            #end
-                            #if ($reviewResults.size() >= 3)
-                            </div>
-                            #end
+                            #contentReviewReports($submission false true)
                         #end
                     </td>
 
@@ -250,7 +214,7 @@
 ##                    <th>$tlang.getString('gen.history')</th>
 ##                    <td>
 ##                        #foreach ($entry in $submission.getSubmissionLog())
-##                            $entry<br/>
+##                            $validator.escapeHtml($entry)<br/>
 ##                        #end
 ##                    </td>
 ##                </tr>
@@ -597,7 +561,7 @@
                                 #set ($group_value_grade = $value_grades.get($submitter.getSubmitter()))
                                 #if ($gradeType == 2)
                                     <div class="row-override">
-                                        <label>$!submitterName</label>
+                                        <label>$validator.escapeHtml($!submitterName)</label>
                                         <div class="shorttext">
                                             <span$tlang.getString("gen.grade.override")</span>
                                             <select name="$group_name_grade" id="grade">
@@ -617,7 +581,7 @@
                                     </div>
                                 #elseif ($gradeType == 3)
                                     <div class="row-override">
-                                        <label>$!submitterName</label>
+                                        <label>$validator.escapeHtml($!submitterName)</label>
                                         <div class="shorttext">
                                             <span>$tlang.getString("gen.grade.override")</span> <input type="text"
                                                 name="$group_name_grade"
@@ -631,7 +595,7 @@
                                     </div>
                                 #elseif ($gradeType == 4)
                                     <div class="row-override">
-                                        <label>$!submitterName</label>
+                                        <label>$validator.escapeHtml($!submitterName)</label>
                                         <div class="shorttext">
                                             <span>$tlang.getString("gen.grade.override")</span>
                                             <select name="$group_name_grade" id="grade">
@@ -658,7 +622,7 @@
                                     </div>
                                 #elseif ($gradeType == 5)
                                     <div class="row-override">
-                                        <label>$!submitterName</label>
+                                        <label>$validator.escapeHtml($!submitterName)</label>
                                         <div class="assignment-checkbox-inline">
                                             <span>$tlang.getString("gen.grade.override")</span>
                                             <label for="$group_name_grade">

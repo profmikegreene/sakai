@@ -17,9 +17,11 @@ package org.sakaiproject.portal.beans.bullhornhandlers;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.annotation.Resource;
 import javax.inject.Inject;
@@ -73,11 +75,11 @@ public class AnnouncementsBullhornHandler extends AbstractBullhornHandler {
 
     @Override
     public List<String> getHandledEvents() {
-        return Arrays.asList(AnnouncementService.SECURE_ANNC_ADD, AnnouncementService.EVENT_ANNC_UPDATE_AVAILABILITY);
+        return Arrays.asList(AnnouncementService.SECURE_ANNC_ADD, AnnouncementService.EVENT_ANNC_UPDATE_AVAILABILITY, AnnouncementService.SECURE_ANNC_REMOVE_OWN, AnnouncementService.SECURE_ANNC_REMOVE_ANY);
     }
 
     @Override
-    public Optional<List<BullhornData>> handleEvent(Event e, Cache<String, Map> countCache) {
+    public Optional<List<BullhornData>> handleEvent(Event e, Cache<String, Long> countCache) {
 
         String from = e.getUserId();
 
@@ -87,13 +89,17 @@ public class AnnouncementsBullhornHandler extends AbstractBullhornHandler {
         String siteId = pathParts[3];
 
         SecurityAdvisor sa = unlock(new String[] {AnnouncementService.SECURE_ANNC_READ, AnnouncementService.SECURE_ANNC_READ_DRAFT});
+        AnnouncementMessage message = null;
         try {
-            AnnouncementMessage message
-                = (AnnouncementMessage) announcementService.getMessage(
-                                                entityManager.newReference(ref));
-
-            // If the announcement has just been hidden, remove any existing alerts for it
-            if (e.getEvent().equals(AnnouncementService.EVENT_ANNC_UPDATE_AVAILABILITY) && message.getHeader().getDraft()) {
+            message = (AnnouncementMessage) announcementService.getMessage(entityManager.newReference(ref));
+        } catch (Exception ex) {
+            log.debug("No announcement with id {}", ref);
+        }
+        // TODO: the following code could be simplified. Lots of try catches.
+        try {
+            // If the announcement has just been hidden or removed, remove any existing alerts for it
+            if ((AnnouncementService.SECURE_ANNC_REMOVE_OWN.equals(e.getEvent()) || AnnouncementService.SECURE_ANNC_REMOVE_ANY.equals(e.getEvent()))
+                        || (AnnouncementService.EVENT_ANNC_UPDATE_AVAILABILITY.equals(e.getEvent()) && message.getHeader().getDraft())) {
                 try {
                     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
 
@@ -118,6 +124,7 @@ public class AnnouncementsBullhornHandler extends AbstractBullhornHandler {
                 } catch (Exception e1) {
                     log.error("Failed to delete bullhorn add announcement event", e1);
                 }
+                return Optional.empty();
             }
 
             if (!message.getHeader().getDraft() && announcementService.isMessageViewable(message)) {
@@ -133,11 +140,22 @@ public class AnnouncementsBullhornHandler extends AbstractBullhornHandler {
                         = ((AnnouncementMessageHeader) message.getHeader()).getSubject();
 
                     List<BullhornData> bhEvents = new ArrayList<>();
+                    Set<String> usersList = new HashSet<>();
 
-                    // Get all the members of the site with read ability
-                    for (String  to : site.getUsersIsAllowed(AnnouncementService.SECURE_ANNC_READ)) {
+                    if (message.getHeader().getGroups().isEmpty()) {
+                        // Get all the members of the site with read ability if the announcement is not for groups
+                        usersList = site.getUsersIsAllowed(AnnouncementService.SECURE_ANNC_READ);
+                    }
+                    else {
+                        // Otherwise get the members of the groups
+                        for (String group : message.getHeader().getGroups()) {
+                            usersList.addAll(site.getGroup(group).getUsersIsAllowed(AnnouncementService.SECURE_ANNC_READ));
+                        }
+                    }
+
+                    for (String  to : usersList) {
                         if (!from.equals(to) && !securityService.isSuperUser(to)) {
-                            bhEvents.add(new BullhornData(from, to, siteId, title, url, false));
+                            bhEvents.add(new BullhornData(from, to, siteId, title, url));
                             countCache.remove(to);
                         }
                     }

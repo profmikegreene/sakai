@@ -97,7 +97,6 @@ import org.sakaiproject.entity.api.ContentExistsAware;
 import org.sakaiproject.entity.api.Entity;
 import org.sakaiproject.entity.api.EntityProducer;
 import org.sakaiproject.entity.api.EntityTransferrer;
-import org.sakaiproject.entity.api.HardDeleteAware;
 import org.sakaiproject.entity.api.Reference;
 import org.sakaiproject.entity.api.ResourceProperties;
 import org.sakaiproject.entity.api.ResourcePropertiesEdit;
@@ -570,6 +569,8 @@ public class SiteAction extends PagedResourceActionII {
 	private static final String STATE_IMPORT_SITES = "state_import_sites";
 
 	private static final String STATE_IMPORT_SITE_TOOL = "state_import_site_tool";
+
+	private static final String STATE_IMPORT_SITE_TOOL_OPTIONS = "state_import_site_tool_options";
 
 	/** for navigating between sites in site list */
 	private static final String STATE_SITES = "state_sites";
@@ -2845,7 +2846,7 @@ public class SiteAction extends PagedResourceActionII {
 			 * 
 			 */
 			boolean existingSite = site != null;
-			
+
 			// define the tools available for import. defaults to those tools in the 'destination' site
 			List<String> importableToolsIdsInDestinationSite = (List) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST);
 			if (existingSite) {
@@ -3464,7 +3465,7 @@ public class SiteAction extends PagedResourceActionII {
 			// Add the menus to vm
 			MenuBuilder.buildMenuForSiteInfo(portlet, data, state, context, site, rb, siteTypeProvider, SiteInfoActiveTab.EDIT_CLASS_ROSTERS);
 
-			context.put("allowAddSite", SiteService.allowAddSite(site.getId()));
+			context.put("allowAddRoster", SecurityService.unlock(SiteService.SECURE_UPDATE_SITE_MEMBERSHIP, site.getReference()));
 			context.put("siteTitle", site.getTitle());
 			coursesIntoContext(state, context, site);
 
@@ -5338,12 +5339,28 @@ public class SiteAction extends PagedResourceActionII {
 				}
 			}
 		}
-		
-		log.debug("tools to import: " + importTools);
+
+		if (log.isDebugEnabled()) {
+			log.debug("tools to import: " + importTools);
+		}
 		state.setAttribute(STATE_IMPORT_SITE_TOOL, importTools);
 
-		return anyToolSelected;
+		Map<String, List<String>> toolOptions = new HashMap<>();
+		for (Iterator<String> iter = params.getNames(); iter.hasNext();) {
+			String name = iter.next();
+			if (name.startsWith("import-option-")) {
+				String option = name.substring(14, name.indexOf("-tool-"));
+				String toolId = name.substring(name.indexOf("-tool-") + 6);
+				if (toolOptions.get(toolId) == null) {
+					toolOptions.put(toolId, new ArrayList<>());
+				}
+				toolOptions.get(toolId).add(option);
+			}
+		}
 
+		state.setAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS, toolOptions);
+
+		return anyToolSelected;
 	} // select_import_tools
 
 	/**
@@ -5507,16 +5524,9 @@ public class SiteAction extends PagedResourceActionII {
 					try {
 						Site site = SiteService.getSite(id);
 						site_title = site.getTitle();
-						
-						if(hardDelete) {
-							//hard delete. call upon all implementing services to hard delete their own content
-							doHardDelete(site.getId());
-							// the service never deletes the site unless its already softly deleted
-							site.setSoftlyDeleted(true);
-						}
-						
+
 						//now delete the site
-						SiteService.removeSite(site);
+						SiteService.removeSite(site, hardDelete);
 						log.debug("Removed site: " + site.getId());
 					} catch (IdUnusedException e) {
 						log.error(this +".doSite_delete_confirmed - IdUnusedException " + id, e);
@@ -6294,14 +6304,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			}
 		}
 	}
-	
-	List toolRegistrationSelectedList = (List) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST);
-	
-	//If this is the first time through add these selected tools as the default otherwise don't touch this
-	if (toolRegistrationSelectedList==null) {
-		state.setAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST, selectedTools);
-	}
-
 	return toolGroup;
 }
 
@@ -8816,23 +8818,19 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 	
 
 	/**
- 	* SAK 23029 -  iterate through changed partiants to see how many would have maintain role if all roles, status and deletion changes went through
- 	*
- 	*/ 
+	* SAK-23029 -  iterate through changed participants to see how many would have maintain role if all roles, status and deletion changes went through
+	*
+	*/ 
 	private List<Participant> testProposedUpdates(List<Participant> participants, ParameterParser params, String maintainRole) {
-		List<Participant> maintainersAfterUpdates = new ArrayList<Participant>();
-		// create list of all partcipants that have been 'Charles Bronson-ed'
+
+		// create list of all partcipants that have been removed
 		Set<String> removedParticipantIds = new HashSet();
-		Set<String> deactivatedParticipants = new HashSet();
 		if (params.getStrings("selectedUser") != null) {
-			List removals = new ArrayList(Arrays.asList(params.getStrings("selectedUser")));
-			for (int i = 0; i < removals.size(); i++) {
-				String rId = (String) removals.get(i);
-				removedParticipantIds.add(rId);
-			}
+			removedParticipantIds.addAll(new ArrayList(Arrays.asList(params.getStrings("selectedUser"))));
 		}
 
-		// create list of all participants that have been deactivated
+		// create list of all participants that have been inactivated
+		Set<String> inactivatedParticipants = new HashSet();
 		for(Participant statusParticipant : participants ) {
 			String activeGrantId = statusParticipant.getUniqname();
 			String activeGrantField = "activeGrant" + activeGrantId;
@@ -8840,31 +8838,33 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			if (params.getString(activeGrantField) != null) { 
 				boolean activeStatus = params.getString(activeGrantField).equalsIgnoreCase("true") ? true : false;
 				if (activeStatus == false) {
-					deactivatedParticipants.add(activeGrantId);
+					inactivatedParticipants.add(activeGrantId);
 				}
 			}
 		}
 
-
-		// now add only those partcipants whose new/current role is maintainer, is (still) active, and not marked for deletion
+		// now add only those partcipants whose new/current role is maintainer, is (still) active, and not marked for removal
+		List<Participant> maintainersAfterUpdates = new ArrayList<Participant>();
 		for(Participant roleParticipant : participants ) {
 			String id = roleParticipant.getUniqname();
 			String roleId = "role" + id;
 			String newRole = params.getString(roleId);
-			if ((deactivatedParticipants.contains(id)==false) && roleParticipant.isActive() != false) { // skip any that are not already inactive or are not  candidates for deactivation
-				 if (removedParticipantIds.contains(id) == false) {
-					if (newRole != null){
+
+			// skip any that are not already inactive or are not candidates for inactivation
+			if (!inactivatedParticipants.contains(id) && roleParticipant.isActive()) {
+				 if (!removedParticipantIds.contains(id)) {
+					if (StringUtils.isNotBlank(newRole)){
 						if (newRole.equals(maintainRole)) {
 							maintainersAfterUpdates.add(roleParticipant);
 						}
-					} else { 
+					} else {
 						// participant has no new role; was participant already maintainer?
 						if (roleParticipant.getRole().equals(maintainRole)) {
 							maintainersAfterUpdates.add(roleParticipant);
 						}
 					}
 				}
-			}	
+			}
 		}
 		return maintainersAfterUpdates;
 	}
@@ -8895,22 +8895,23 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				// init variables useful for actual edits and mainainersAfterProposedChanges check
 				AuthzGroup realmEdit = authzGroupService.getAuthzGroup(realmId);
 				String maintainRoleString = realmEdit.getMaintainRole();
-				List participants;
+				List<Participant> participants;
 				//Check for search term
 				String search = (String)state.getAttribute(SITE_USER_SEARCH);
 				if(StringUtils.isNotBlank(search)) {
-					//search is true, get the complete list of participants from the other attribute.
-					participants = collectionToList((Collection) state.getAttribute(STATE_SITE_PARTICIPANT_LIST));
+					// search term is provided, get the search-filtered list of participants from the other attribute.
+					participants = new ArrayList<>((Collection) state.getAttribute(STATE_SITE_PARTICIPANT_LIST));
 				} else {
-					participants = collectionToList((Collection) state.getAttribute(STATE_PARTICIPANT_LIST));
+					// search term not provided, get the list (either full list or filtered by 'view' drop down)
+					participants = new ArrayList<>((Collection) state.getAttribute(STATE_PARTICIPANT_LIST));
 				}
 
-				// SAK 23029 Test proposed removals/updates; reject all where activeMainainer count would = 0 if all proposed changes were made
-				List<Participant> maintainersAfterProposedChanges = testProposedUpdates(participants, params, maintainRoleString);
-
+				// SAK-23029 Test proposed removals/updates; reject all where activeMainainer count would = 0 if all proposed changes were made
+				// SAK-42185 need to provide full list of participants to test proposed updates, not filtered/search list
+				List<Participant> allParticipants = new ArrayList<>(SiteParticipantHelper.prepareParticipants(s.getId(), SiteParticipantHelper.getProviderCourseList(s.getId())));
+				List<Participant> maintainersAfterProposedChanges = testProposedUpdates(allParticipants, params, maintainRoleString);
 				if (maintainersAfterProposedChanges.size() == 0) {
-					addAlert(state, 
-						rb.getFormattedMessage("sitegen.siteinfolist.lastmaintainuseractive", new Object[]{maintainRoleString} ));
+					addAlert(state, rb.getFormattedMessage("sitegen.siteinfolist.lastmaintainuseractive", new Object[] {maintainRoleString}));
 					return;
 				}
 
@@ -8923,11 +8924,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				List<String[]> userAuditList = new ArrayList<String[]>();
 
 				// remove all roles and then add back those that were checked
-				for (int i = 0; i < participants.size(); i++) {
+				for (Participant participant : participants) {
 					String id = null;
 
 					// added participant
-					Participant participant = (Participant) participants.get(i);
 					id = participant.getUniqname();
 
 					if (id != null) {
@@ -9001,7 +9001,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 								
 								// add to the list for all participants that have role changes
 								userUpdated.add(userUpdatedString);
-
 						}
 					}
 				}
@@ -9049,7 +9048,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				}
 
 				// if user doesn't have update, don't let them add or remove any role with site.upd in it.
-
 				if (!authzGroupService.allowUpdate(realmId)) {
 					// see if any changed have site.upd
 					for (String rolename: roles) {
@@ -9626,11 +9624,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 					if (select_import_tools(params, state)) {
 						// list of tools that were selected for import
 						Map<String, List<String>> importTools = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL);
+						Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 
 						//list of existing tools in the destination site
 						List<String> existingTools = getOriginalToolIds((List<String>) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST), state);
-
-						Map<String, List<String>> toolOptions = getToolOptionsFromParams(params);
 
 						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions, false);
 						if (importTaskStarted) {
@@ -9669,11 +9666,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 					if (select_import_tools(params, state)) {
 						// list of tools that were selected for import
 						Map<String, List<String>> importTools = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL);
+						Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 
 						//list of existing tools in the destination site
 						List<String> existingTools = getOriginalToolIds((List<String>) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST), state);
-
-						Map<String, List<String>> toolOptions = getToolOptionsFromParams(params);
 
 						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions, true);
 
@@ -10260,13 +10256,8 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			};
 			SecurityService.pushAdvisor(yesMan);
 
-			// Hard delete. Call upon all implementing services to hard delete their own content
-			doHardDelete(tempDupSite.getId());
-			// The service never deletes the site unless its already softly deleted
-			tempDupSite.setSoftlyDeleted(true);
-
 			// Now hard delete the site
-			SiteService.removeSite(tempDupSite);
+			SiteService.removeSite(tempDupSite, true);
 		} catch (Exception e) {
 		} finally {
 			SecurityService.popAdvisor();
@@ -11582,25 +11573,20 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			state.removeAttribute(STATE_TOOL_EMAIL_ADDRESS);
 		}
 
-		// commit
 		commitSite(site);
 		
+		Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
+
+		siteManageService.importToolsIntoSite(site, chosenList, importTools, toolOptions, false);
+
+		// after importing content we need to refresh the site
 		site = refreshSiteObject(site);
 
-		// import
-		siteManageService.importToolsIntoSite(site, chosenList, importTools, null, false);
-		
-		// SAK-22384 add LaTeX (MathJax) support
-		if (MathJaxEnabler.prepareMathJaxToolSettingsForSave(site, state))
-		{
-			commitSite(site);
-		}
-
-		if (LessonsSubnavEnabler.prepareSiteForSave(site, state)) {
-			commitSite(site);
-		}
-
-		if (PortalNeochatEnabler.prepareSiteForSave(site, state)) {
+		boolean updateSite;
+		updateSite = MathJaxEnabler.prepareMathJaxToolSettingsForSave(site, state);
+		updateSite = LessonsSubnavEnabler.prepareSiteForSave(site, state) || updateSite;
+		updateSite = PortalNeochatEnabler.prepareSiteForSave(site, state) || updateSite;
+		if (updateSite) {
 			commitSite(site);
 		}
 	} // saveFeatures
@@ -12816,8 +12802,9 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 								// save the attribute input if valid, otherwise generate alert
 								if ( FormattedText.validateURL(attributeInput) )
 									attributes.put(attribute, attributeInput);
-								else
+								else {
 									addAlert(state, rb.getString("java.invurl"));
+								}
 							}
 						}
 						multipleToolConfiguration.put(id, attributes);
@@ -12848,6 +12835,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		if (state.getAttribute(STATE_LTITOOL_SELECTED_LIST) != null)
 		{
 			Site site = getStateSite(state);
+			if (site == null)
+			{
+				return;
+			}
 			Properties reqProps = params.getProperties();
 			// remember the reqProps may contain multiple lti inputs, so we need to differentiate those inputs and store one tool specific input into the map
 			HashMap<String, Map<String, Object>> ltiTools = (HashMap<String, Map<String, Object>>) state.getAttribute(STATE_LTITOOL_SELECTED_LIST);
@@ -15560,27 +15551,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 	}
 	
 	/**
-	 * Helper to hard delete all implementing services
-	 * @param siteId siteId that we want to delete the content for
-	 * @return
-	 */
-	private void doHardDelete(String siteId) {
-				
-		// leverage the entityproducer registration system
-		for (Iterator i = EntityManager.getEntityProducers().iterator(); i.hasNext();) {
-			EntityProducer ep = (EntityProducer) i.next();
-			
-			//if a registered service implements hard delete, then ask it to delete itself
-			if (ep instanceof HardDeleteAware) {
-				HardDeleteAware hd = (HardDeleteAware) ep;
-				log.info("Requesting hard delete for site:" + siteId + ", tool: " + ep.getLabel());
-				hd.hardDelete(siteId);
-			}
-		}
-		
-	}
-
-	/**
 	 * Get the list of tools that are in a list of sites that are available for import.
 	 * 
 	 * Only tools with content will be collected. See hasContent(toolId, siteId) for the behaviour.
@@ -16177,23 +16147,5 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		tools.removeAll(removedTools);
 
 		state.setAttribute("tools", tools);
-	}
-
-	private Map<String, List<String>> getToolOptionsFromParams(ParameterParser params) {
-
-		Map<String, List<String>> toolOptions = new HashMap<>();
-		for (Iterator<String> iter = params.getNames(); iter.hasNext();) {
-			String name = iter.next();
-			if (name.startsWith("import-option-")) {
-				String option = name.substring(14, name.indexOf("-tool-"));
-				String toolId = name.substring(name.indexOf("-tool-") + 6);
-				if (toolOptions.get(toolId) == null) {
-					toolOptions.put(toolId, new ArrayList<>());
-				}
-				toolOptions.get(toolId).add(option);
-			}
-		}
-
-		return toolOptions;
 	}
 }

@@ -35,7 +35,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -442,7 +441,6 @@ public class AssignmentAction extends PagedResourceActionII {
      */
     private static final String GRADE_ASSIGNMENT_EXPAND_FLAG = "grade_assignment_expand_flag";
     private static final String GRADE_SUBMISSION_EXPAND_FLAG = "grade_submission_expand_flag";
-    private static final String GRADE_NO_SUBMISSION_DEFAULT_GRADE = "grade_no_submission_default_grade";
     /**
      * ****************** instructor's grade submission *****************************
      */
@@ -548,6 +546,8 @@ public class AssignmentAction extends PagedResourceActionII {
     private static final String VIEW_GRADE_SUBMISSION_ID = "view_grade_submission_id";
     // alert for grade exceeds max grade setting
     private static final String GRADE_GREATER_THAN_MAX_ALERT = "grade_greater_than_max_alert";
+
+    private static final String DEFAULT_GRADE = "defaultGrade";
     /**
      * The list view of assignments
      */
@@ -1479,8 +1479,13 @@ public class AssignmentAction extends PagedResourceActionII {
 
             if (assignment.getContentReview()) {
                 Map<String, String> properties = assignment.getProperties();
-                state.setAttribute("plagiarismNote", rb.getFormattedMessage("gen.yoursubwill", contentReviewService.getServiceName()));
+
+                // Indicate that the student's submission is going to Turnitin, and whether their submission will be indexed to be compared against by other submissions
+                boolean isSubmissionIndexed = "true".equalsIgnoreCase(properties.get("store_inst_index"));
+                String plagiarismNoteKey = isSubmissionIndexed ? "gen.yoursubwill.indexed" : "gen.yoursubwill";
+                state.setAttribute("plagiarismNote", rb.getFormattedMessage(plagiarismNoteKey, contentReviewService.getServiceName()));
                 context.put("plagiarismNote", state.getAttribute("plagiarismNote"));
+
                 if (!contentReviewService.allowAllContent() && assignmentSubmissionTypeTakesAttachments(assignment)) {
                 		state.setAttribute("plagiarismFileTypes", rb.getFormattedMessage("gen.onlythefoll", getContentReviewAcceptedFileTypesMessage())); 
                     context.put("plagiarismFileTypes", state.getAttribute("plagiarismFileTypes"));
@@ -4184,11 +4189,6 @@ public class AssignmentAction extends PagedResourceActionII {
 
             // put creator information into context
             putCreatorIntoContext(context, assignment);
-
-            String defaultGrade = assignment.getProperties().get(GRADE_NO_SUBMISSION_DEFAULT_GRADE);
-            if (defaultGrade != null) {
-                context.put("defaultGrade", defaultGrade);
-            }
 
             initViewSubmissionListOption(state);
 
@@ -7350,8 +7350,8 @@ public class AssignmentAction extends PagedResourceActionII {
         if (groupAssignment) {
             Collection<String> users = usersInMultipleGroups(state, Assignment.Access.GROUP.toString().equals(range), (Assignment.Access.GROUP.toString().equals(range) ? data.getParameters().getStrings("selectedGroups") : null), false, null);
             if (!users.isEmpty()) {
-                String usersString = rb.getString("group.user.multiple.warning") + " " + String.join(",", users);
-                log.warn("{}", usersString);
+                String usersString = rb.getString("group.user.multiple.warning") + " " + formattedText.escapeHtml(String.join(",", users));
+                log.warn("at least one user in multiple groups: {}", usersString);
                 addAlert(state, usersString);
             }
         }
@@ -8021,6 +8021,7 @@ public class AssignmentAction extends PagedResourceActionII {
             if (submissionType == Assignment.SubmissionType.NON_ELECTRONIC_ASSIGNMENT_SUBMISSION) {
                 useReviewService = a.getContentReview();
                 allowStudentViewReport = Boolean.valueOf(p.get(NEW_ASSIGNMENT_ALLOW_STUDENT_VIEW));
+                allowResubmitNumber = null;
             }
 
             String submitReviewRepo = (String) state.getAttribute(NEW_ASSIGNMENT_REVIEW_SERVICE_SUBMIT_RADIO);
@@ -8911,6 +8912,7 @@ public class AssignmentAction extends PagedResourceActionII {
             CalendarEventEdit edit = c.getEditEvent(e.getId(), org.sakaiproject.calendar.api.CalendarService.EVENT_ADD_CALENDAR);
 
             edit.setField(AssignmentConstants.NEW_ASSIGNMENT_DUEDATE_CALENDAR_ASSIGNMENT_ID, assignment.getId());
+            edit.setField(AssignmentConstants.NEW_ASSIGNMENT_OPEN_DATE_ANNOUNCED, assignmentService.getUsersLocalDateTimeString(assignment.getOpenDate()));
 
             c.commitEvent(edit);
         }
@@ -10072,8 +10074,14 @@ public class AssignmentAction extends PagedResourceActionII {
                     if (a != null) {
                         a.setDeleted(false);
                         assignmentService.updateAssignment(a);
-                    }
 
+                        // restore email reminder only if reminder is set and the due date is after 1 day
+                        if (BooleanUtils.toBoolean(a.getProperties().get(NEW_ASSIGNMENT_REMINDER_EMAIL))
+                                && a.getDueDate() != null
+                                && Instant.now().plus(1, ChronoUnit.DAYS).isBefore(a.getDueDate())) {
+                            assignmentDueReminderService.scheduleDueDateReminder(a.getId());
+                        }
+                    }
                 } catch (IdUnusedException | PermissionException e) {
                     addAlert(state, rb.getFormattedMessage("youarenot_editAssignment", id));
                     log.warn(e.getMessage());
@@ -10406,9 +10414,6 @@ public class AssignmentAction extends PagedResourceActionII {
         // whether the user can access the Submission object
         if (s != null) {
             String status = assignmentService.getSubmissionStatus(s.getId());
-            if ("Not Started".equals(status) || (rb.getString("gen.notsta").equals(status))) {
-                addAlert(state, rb.getString("stuviewsubm.theclodat"));
-            }
 
             // show submission view unless group submission with group error
             Assignment a = s.getAssignment();
@@ -13028,7 +13033,7 @@ public class AssignmentAction extends PagedResourceActionII {
         SessionState state = ((JetspeedRunData) data).getPortletSessionState(((JetspeedRunData) data).getJs_peid());
         ParameterParser params = data.getParameters();
 
-        String grade = StringUtils.trimToNull(params.getString("defaultGrade"));
+        String grade = StringUtils.trimToNull(params.getString(DEFAULT_GRADE));
         if (grade == null) {
             addAlert(state, rb.getString("plespethe2"));
         }
@@ -13049,6 +13054,7 @@ public class AssignmentAction extends PagedResourceActionII {
                                 // alert user first when he enters grade bigger than max scale
                                 addAlert(state, rb.getFormattedMessage("grad2", grade, displayGrade(state, String.valueOf(maxGrade), a.getScaleFactor())));
                                 state.setAttribute(GRADE_GREATER_THAN_MAX_ALERT, Boolean.TRUE);
+                                state.setAttribute(DEFAULT_GRADE, grade);
                             } else {
                                 // remove the alert once user confirms he wants to give student higher grade
                                 state.removeAttribute(GRADE_GREATER_THAN_MAX_ALERT);
@@ -13064,9 +13070,8 @@ public class AssignmentAction extends PagedResourceActionII {
                 if (state.getAttribute(STATE_MESSAGE) == null) {
 
                     try {
-                        // Save value as input by user, not scaled
-                        a.getProperties().put(GRADE_NO_SUBMISSION_DEFAULT_GRADE, grade);
                         assignmentService.updateAssignment(a);
+                        state.setAttribute(DEFAULT_GRADE, StringUtils.EMPTY);
                     } catch (PermissionException e) {
                         log.warn("Could not update assignment: {}, {}", a.getId(), e.getMessage());
                     }
@@ -13112,7 +13117,7 @@ public class AssignmentAction extends PagedResourceActionII {
         SessionState state = ((JetspeedRunData) data).getPortletSessionState(((JetspeedRunData) data).getJs_peid());
         ParameterParser params = data.getParameters();
 
-        String grade = StringUtils.trimToNull(params.getString("defaultGrade"));
+        String grade = StringUtils.trimToNull(params.getString(DEFAULT_GRADE));
         if (grade == null) {
             addAlert(state, rb.getString("plespethe2"));
         }
@@ -13133,6 +13138,7 @@ public class AssignmentAction extends PagedResourceActionII {
                                 // alert user first when he enters grade bigger than max scale
                                 addAlert(state, rb.getFormattedMessage("grad2", grade, displayGrade(state, String.valueOf(maxGrade), a.getScaleFactor())));
                                 state.setAttribute(GRADE_GREATER_THAN_MAX_ALERT, Boolean.TRUE);
+                                state.setAttribute(DEFAULT_GRADE, grade);
                             } else {
                                 // remove the alert once user confirms he wants to give student higher grade
                                 state.removeAttribute(GRADE_GREATER_THAN_MAX_ALERT);
@@ -13147,9 +13153,8 @@ public class AssignmentAction extends PagedResourceActionII {
                 // Only record the default grade setting for no-submission if there were no errors produced
                 if (state.getAttribute(STATE_MESSAGE) == null) {
                     try {
-                        // Save value as input by user, not scaled
-                        a.getProperties().put(GRADE_NO_SUBMISSION_DEFAULT_GRADE, grade);
                         assignmentService.updateAssignment(a);
+                        state.setAttribute(DEFAULT_GRADE, StringUtils.EMPTY);
                     } catch (PermissionException e) {
                         log.warn("Could not update assignment: {}, {}", a.getId(), e.getMessage());
                     }
@@ -13306,7 +13311,7 @@ public class AssignmentAction extends PagedResourceActionII {
             while (_it.hasNext()) {
                 _sb.append(", " + _it.next());
             }
-            addAlert(state, _sb.toString());
+            addAlert(state, formattedText.escapeHtml(_sb.toString(), false));
         }
         return _dupUsers;
     }
