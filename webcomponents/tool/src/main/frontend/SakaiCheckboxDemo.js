@@ -44,7 +44,7 @@ export class MyCheckbox extends SakaiElement {
     }
 
     attributeChangedCallback(name, oldval, newval) {
-        console.log(name, newval);
+        // console.log(name, newval);
         super.attributeChangedCallback(name, oldval, newval);
     }
 }
