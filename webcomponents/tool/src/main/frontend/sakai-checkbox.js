@@ -1,7 +1,7 @@
 import { LitElement, html, css } from './assets/lit-element/lit-element.js';
 import {SakaiElement} from "./sakai-element.js";
 
-export class MyCheckbox extends SakaiElement {
+export class SakaiCheckbox extends SakaiElement {
 
     static get properties() {
         return {
@@ -55,4 +55,4 @@ export class MyCheckbox extends SakaiElement {
     }
 }
 
-customElements.define("chk-box", MyCheckbox);
+customElements.define("sakai-checkbox", SakaiCheckbox);
