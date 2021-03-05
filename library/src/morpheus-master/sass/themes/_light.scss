@@ -30,8 +30,9 @@
     // purple, and red palettes available for you to use.
     // More info about defineColorHSL in sass/themes/_base.scss
 
-    $colorPalette: map-merge($colorPalette, defineColorHEX(sakai-brand, #0f4b70));
-
+    // $colorPalette: map-merge($colorPalette, defineColorHEX(sakai-brand, #0f4b70));
+    
+    $theme-colors: map-merge($theme-colors, (sakai-brand: #0f4b70));
     /////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////

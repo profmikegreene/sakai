@@ -1,10 +1,10 @@
 @import "customization"; //it is copied from the user supplied file by maven
 
 @import "themes/base";
-
 @import "themes/light";
 @import "themes/dark";
 @import "themes/custom";
+@import "themes/generate";
 
 @import "defaults";
 
@@ -93,5 +93,3 @@
 @import "modules/widget-panel/base";
 @import "modules/theme-switcher/base";
 @import "modules/multiselect/base";
-
-@import "themes/generate";

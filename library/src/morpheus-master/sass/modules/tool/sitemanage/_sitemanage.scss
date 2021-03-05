@@ -377,7 +377,8 @@
         }
       }
       &.communication a {
-        @extend .sakai-colorize--sakai-color-blue;
+        // @extend .sakai-colorize--sakai-color-blue;
+        @include sakai-colorize(sakai-blue);
       }
       &.assessment a {
         @extend .sakai-colorize--sakai-color-gold;
