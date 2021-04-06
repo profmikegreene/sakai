@@ -24,7 +24,7 @@ services:
   # Shell In A Box on a maven container.
   #
   builder:
-    image: maven:3.6.1-jdk-8
+    image: markhobson/maven-chrome:jdk-8
     volumes:
       - "$PWD/lib/maven_entry.sh:/maven_entry.sh"
       - "$PWD/CONFIG/maven/zshrc:/root/.zshrc"
